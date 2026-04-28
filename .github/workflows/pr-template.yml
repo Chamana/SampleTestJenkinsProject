@@ -1,7 +1,12 @@
-# .github/workflows/pr-template.yml
+name: Set PR template by branch
+
 on:
   pull_request:
     types: [opened]
+
+permissions:
+  pull-requests: write
+  contents: read
 
 jobs:
   set-template:
@@ -18,10 +23,21 @@ jobs:
             const fs = require('fs');
 
             let file = '.github/PULL_REQUEST_TEMPLATE/default.md';
-            if (branch.startsWith('feature/'))       file = '.github/PULL_REQUEST_TEMPLATE/feature.md';
-            else if (branch.match(/^(fix|bugfix)\//)) file = '.github/PULL_REQUEST_TEMPLATE/bugfix.md';
+            if (branch.startsWith('feature/'))         file = '.github/PULL_REQUEST_TEMPLATE/feature.md';
+            else if (branch.match(/^(fix|bugfix)\//))  file = '.github/PULL_REQUEST_TEMPLATE/bugfix.md';
+            else if (branch.startsWith('hotfix/'))     file = '.github/PULL_REQUEST_TEMPLATE/hotfix.md';
+            else if (branch.startsWith('release/'))    file = '.github/PULL_REQUEST_TEMPLATE/release.md';
+            else if (branch.startsWith('chore/'))      file = '.github/PULL_REQUEST_TEMPLATE/chore.md';
 
-            const body = fs.readFileSync(file, 'utf8');
+            console.log(`Branch: ${branch} → template: ${file}`);
+
+            let body;
+            try {
+              body = fs.readFileSync(file, 'utf8');
+            } catch (e) {
+              console.log(`Template file not found: ${file}, skipping.`);
+              return;
+            }
 
             if (!context.payload.pull_request.body?.trim()) {
               await github.rest.pulls.update({
@@ -29,4 +45,7 @@ jobs:
                 pull_number: context.payload.pull_request.number,
                 body
               });
+              console.log('PR body updated successfully.');
+            } else {
+              console.log('PR already has a body, skipping.');
             }
