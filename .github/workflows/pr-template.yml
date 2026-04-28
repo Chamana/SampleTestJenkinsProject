@@ -1,0 +1,32 @@
+# .github/workflows/pr-template.yml
+on:
+  pull_request:
+    types: [opened]
+
+jobs:
+  set-template:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Apply PR template based on branch
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const branch = context.payload.pull_request.head.ref;
+            const fs = require('fs');
+
+            let file = '.github/PULL_REQUEST_TEMPLATE/default.md';
+            if (branch.startsWith('feature/'))       file = '.github/PULL_REQUEST_TEMPLATE/feature.md';
+            else if (branch.match(/^(fix|bugfix)\//)) file = '.github/PULL_REQUEST_TEMPLATE/bugfix.md';
+
+            const body = fs.readFileSync(file, 'utf8');
+
+            if (!context.payload.pull_request.body?.trim()) {
+              await github.rest.pulls.update({
+                ...context.repo,
+                pull_number: context.payload.pull_request.number,
+                body
+              });
+            }
